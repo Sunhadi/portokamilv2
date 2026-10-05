@@ -53,6 +53,10 @@ export default function Home() {
   const [certifications, setCertifications] = useState<Certification[]>([])
   const [loading, setLoading] = useState(true)
   const [dark, setDark] = useState(false)
+  const [projectPage, setProjectPage] = useState(0)
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)').matches : false,
+  )
 
   useEffect(() => {
     if (!supabaseConfigured) { setLoading(false); return }
@@ -77,6 +81,25 @@ export default function Home() {
     }
     fetchAll()
   }, [])
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 768px)')
+    const update = () => setIsDesktop(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
+    setProjectPage(0)
+  }, [projects])
+
+  const projectsPerPage = 4
+  const totalProjectPages = Math.max(1, Math.ceil(projects.length / projectsPerPage))
+  const currentProjectPage = Math.min(projectPage, totalProjectPages - 1)
+  const visibleProjects = isDesktop
+    ? projects.slice(currentProjectPage * projectsPerPage, (currentProjectPage + 1) * projectsPerPage)
+    : projects
 
   if (loading) {
     return (
@@ -203,7 +226,7 @@ export default function Home() {
       <section className="max-w-4xl mx-auto px-4 sm:px-6 pb-16">
         <h2 className="text-3xl font-extrabold text-center mb-8 text-slate-800 dark:text-slate-100">Projects</h2>
         <div className="grid gap-6 sm:grid-cols-2">
-          {projects.map((p) => (
+          {visibleProjects.map((p) => (
             <div key={p.id} className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 shadow p-6">
               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{p.title}</h3>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{p.description}</p>
@@ -219,6 +242,41 @@ export default function Home() {
             </div>
           ))}
         </div>
+
+        {isDesktop && totalProjectPages > 1 && (
+          <div className="mt-8 hidden items-center justify-center gap-2 md:flex">
+            <button
+              type="button"
+              onClick={() => setProjectPage((page) => Math.max(0, page - 1))}
+              disabled={currentProjectPage === 0}
+              className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm text-slate-600 dark:text-slate-300 disabled:opacity-40"
+            >
+              Prev
+            </button>
+            {Array.from({ length: totalProjectPages }, (_, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => setProjectPage(index)}
+                className={`rounded-lg px-3 py-2 text-sm ${
+                  currentProjectPage === index
+                    ? 'bg-teal-600 text-white'
+                    : 'border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                }`}
+              >
+                {index + 1}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setProjectPage((page) => Math.min(totalProjectPages - 1, page + 1))}
+              disabled={currentProjectPage === totalProjectPages - 1}
+              className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm text-slate-600 dark:text-slate-300 disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </section>
 
       <footer className="border-t border-slate-100 dark:border-slate-800 py-6 text-center text-sm text-slate-400">
