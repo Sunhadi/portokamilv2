@@ -2,6 +2,72 @@ import { useEffect, useState, type JSX } from 'react'
 import { supabase, supabaseConfigured } from '../lib/supabase'
 import type { Certification, Education, Experience, Profile, Project, Skill, SocialLinks } from '../types'
 
+type Lang = 'id' | 'en' | 'ja'
+
+const translations: Record<Lang, Record<string, string>> = {
+  id: {
+    loading: 'Memuat portofolio...',
+    lightMode: 'Mode terang',
+    darkMode: 'Mode gelap',
+    yourName: 'Nama Anda',
+    yourTitle: 'Web Developer',
+    yourBio: 'Deskripsi singkat tentang Anda akan tampil di sini. Hubungkan Supabase untuk mengedit konten.',
+    skills: 'Technical Skills',
+    experience: 'Experience',
+    education: 'Education',
+    certifications: 'Certifications',
+    projects: 'Projects',
+    liveDemo: 'Live Demo',
+    repo: 'GitHub Repo',
+    prev: 'Prev',
+    next: 'Next',
+    rights: 'All rights reserved.',
+  },
+  en: {
+    loading: 'Loading portfolio...',
+    lightMode: 'Light mode',
+    darkMode: 'Dark mode',
+    yourName: 'Your Name',
+    yourTitle: 'Web Developer',
+    yourBio: 'A short description about you will appear here. Connect Supabase to edit the content.',
+    skills: 'Technical Skills',
+    experience: 'Experience',
+    education: 'Education',
+    certifications: 'Certifications',
+    projects: 'Projects',
+    liveDemo: 'Live Demo',
+    repo: 'GitHub Repo',
+    prev: 'Prev',
+    next: 'Next',
+    rights: 'All rights reserved.',
+  },
+  ja: {
+    loading: 'ポートフォリオを読み込み中...',
+    lightMode: 'ライトモード',
+    darkMode: 'ダークモード',
+    yourName: 'あなたの名前',
+    yourTitle: 'Web Developer',
+    yourBio: 'あなたについての短い紹介がここに表示されます。Supabaseを接続して内容を編集してください。',
+    skills: '技術スキル',
+    experience: '職歴',
+    education: '学歴',
+    certifications: '資格',
+    projects: 'プロジェクト',
+    liveDemo: 'ライブデモ',
+    repo: 'GitHubリポジトリ',
+    prev: '前へ',
+    next: '次へ',
+    rights: 'All rights reserved.',
+  },
+}
+
+function pickText<T extends Record<string, any>>(lang: Lang, item: T | null | undefined, key: string): string {
+  if (!item) return ''
+  if (lang === 'en' && typeof item[`${key}_en`] === 'string' && item[`${key}_en`]) return item[`${key}_en`]
+  if (lang === 'ja' && typeof item[`${key}_ja`] === 'string' && item[`${key}_ja`]) return item[`${key}_ja`]
+  return item?.[key] ?? ''
+}
+
 function TypingTitle({ text }: { text: string }) {
   const [displayed, setDisplayed] = useState('')
   const [idx, setIdx] = useState(0)
@@ -53,6 +119,7 @@ export default function Home() {
   const [certifications, setCertifications] = useState<Certification[]>([])
   const [loading, setLoading] = useState(true)
   const [dark, setDark] = useState(false)
+  const [lang, setLang] = useState<Lang>(() => (typeof window !== 'undefined' && ['id', 'en', 'ja'].includes(window.localStorage.getItem('lang') ?? '')) ? (window.localStorage.getItem('lang') as Lang) : 'id')
   const [projectPage, setProjectPage] = useState(0)
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)').matches : false,
@@ -94,6 +161,12 @@ export default function Home() {
     setProjectPage(0)
   }, [projects])
 
+  useEffect(() => {
+    window.localStorage.setItem('lang', lang)
+  }, [lang])
+
+  const t = translations[lang]
+
   const projectsPerPage = 4
   const totalProjectPages = Math.max(1, Math.ceil(projects.length / projectsPerPage))
   const currentProjectPage = Math.min(projectPage, totalProjectPages - 1)
@@ -106,7 +179,7 @@ export default function Home() {
       <div className="min-h-screen grid place-items-center" style={{ background: '#f4f8fb' }}>
         <div className="flex flex-col items-center gap-4">
           <div className="h-12 w-12 rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-teal-500 animate-spin" />
-          <p className="text-slate-500 dark:text-slate-400 font-medium animate-pulse">Memuat portofolio...</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium animate-pulse">{t.loading}</p>
         </div>
       </div>
     )
@@ -117,7 +190,7 @@ export default function Home() {
       <button
         onClick={() => setDark(!dark)}
         className="fixed top-4 right-4 z-10 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-md transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95"
-        title={dark ? 'Mode terang' : 'Mode gelap'}
+        title={dark ? t.lightMode : t.darkMode}
       >
         {dark ? (
           <svg className="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
@@ -125,6 +198,19 @@ export default function Home() {
           <svg className="w-5 h-5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         )}
       </button>
+
+      <div className="fixed top-4 left-4 z-10 flex gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1 shadow-md">
+        {(['id', 'en', 'ja'] as Lang[]).map((code) => (
+          <button
+            key={code}
+            type="button"
+            onClick={() => setLang(code)}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${lang === code ? 'bg-teal-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+          >
+            {code === 'ja' ? 'JP' : code.toUpperCase()}
+          </button>
+        ))}
+      </div>
 
       <header className="max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-16 text-center">
         <div className="relative mx-auto mb-6 h-32 w-32">
@@ -137,9 +223,9 @@ export default function Home() {
             )}
           </div>
         </div>
-        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100 px-2">{profile?.name ?? 'Nama Anda'}</h1>
-        <TypingTitle text={profile?.title ?? 'Web Developer'} />
-        <p className="mt-6 font-semibold text-slate-500 dark:text-slate-400 leading-relaxed max-w-3xl mx-auto text-justify">{profile?.bio ?? 'Deskripsi singkat tentang Anda akan tampil di sini. Hubungkan Supabase untuk mengedit konten.'}</p>
+        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100 px-2">{profile?.name ?? t.yourName}</h1>
+        <TypingTitle text={profile ? pickText(lang, profile, 'title') : t.yourTitle} />
+        <p className="mt-6 font-semibold text-slate-500 dark:text-slate-400 leading-relaxed max-w-3xl mx-auto text-justify">{profile ? pickText(lang, profile, 'bio') : t.yourBio}</p>
 
         <div className="mt-8 flex justify-center items-center gap-6">
           {(() => {
@@ -167,7 +253,7 @@ export default function Home() {
       </header>
 
       <section className="max-w-4xl mx-auto px-4 sm:px-6 pb-12">
-        <h2 className="text-3xl font-extrabold text-center mb-6 text-slate-800 dark:text-slate-100">Technical Skills</h2>
+        <h2 className="text-3xl font-extrabold text-center mb-6 text-slate-800 dark:text-slate-100">{t.skills}</h2>
         <div className="flex flex-wrap gap-3 justify-center">
           {skills.map((s) => (
             <span key={s.id} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2 font-medium text-slate-700 dark:text-slate-200 shadow-sm">{s.name}</span>
@@ -176,15 +262,15 @@ export default function Home() {
       </section>
 
       <section className="max-w-3xl mx-auto px-4 sm:px-6 pb-16">
-        <h2 className="text-3xl font-extrabold text-center mb-8 text-slate-800 dark:text-slate-100">Experience</h2>
+        <h2 className="text-3xl font-extrabold text-center mb-8 text-slate-800 dark:text-slate-100">{t.experience}</h2>
         <div className="relative">
           <div className="absolute left-4 md:left-1/2 top-0 h-full w-px bg-slate-200" />
           {experiences.map((e, i) => (
             <div key={e.id} className={`relative mb-8 pl-10 md:pl-0 flex ${i % 2 === 0 ? 'md:justify-start' : 'md:justify-end'}`}>
               <div className="w-full md:w-[45%] rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 shadow p-5">
                 <p className="text-sm font-semibold text-teal-500">{e.year}</p>
-                <h3 className="mt-1 font-bold text-slate-800 dark:text-slate-100">{e.position}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{e.workplace}</p>
+                <h3 className="mt-1 font-bold text-slate-800 dark:text-slate-100">{pickText(lang, e, 'position')}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{pickText(lang, e, 'workplace')}</p>
               </div>
               <div className="absolute left-2.5 md:left-1/2 top-6 h-3 w-3 -translate-x-1/2 rounded-full bg-teal-400 ring-4 ring-white dark:ring-slate-900" />
             </div>
@@ -193,51 +279,57 @@ export default function Home() {
       </section>
 
       <section className="max-w-3xl mx-auto px-4 sm:px-6 pb-16">
-        <h2 className="text-3xl font-extrabold text-center mb-8 text-slate-800 dark:text-slate-100">Education</h2>
+        <h2 className="text-3xl font-extrabold text-center mb-8 text-slate-800 dark:text-slate-100">{t.education}</h2>
         <div className="space-y-6">
           {educations.map((e) => (
             <div key={e.id} className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 shadow p-8 text-center">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{e.university}</h3>
-              <p className="mt-2 text-teal-500 font-medium">{e.degree}</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{e.year} | {e.location}</p>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{pickText(lang, e, 'university')}</h3>
+              <p className="mt-2 text-teal-500 font-medium">{pickText(lang, e, 'degree')}</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{e.year} | {pickText(lang, e, 'location')}</p>
             </div>
           ))}
         </div>
       </section>
 
       <section className="max-w-4xl mx-auto px-4 sm:px-6 pb-16">
-        <h2 className="text-3xl font-extrabold text-center mb-8 text-slate-800 dark:text-slate-100">Certifications</h2>
+        <h2 className="text-3xl font-extrabold text-center mb-8 text-slate-800 dark:text-slate-100">{t.certifications}</h2>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {certifications.map((c) => (
             <div key={c.id} className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 shadow p-6">
               <div className="flex items-start justify-between">
                 <div className="rounded-lg bg-teal-100 p-3">
-                  <svg className="w-6 h-6 text-teal-600 dark:text-teal-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 2.4h3.4v3.4L20 10l-2.2 2.2v3.4h-3.4L12 18l-2.4-2.4H6.2v-3.4L4 10l2.2-2.2V4.4h3.4L12 2zm0 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
+                  {c.issuer_logo_url ? (
+                    <img src={c.issuer_logo_url} alt={c.issuer} className="w-6 h-6 object-contain" />
+                  ) : (
+                    <svg className="w-6 h-6 text-teal-600 dark:text-teal-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 2.4h3.4v3.4L20 10l-2.2 2.2v3.4h-3.4L12 18l-2.4-2.4H6.2v-3.4L4 10l2.2-2.2V4.4h3.4L12 2zm0 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
+                  )}
                 </div>
                 <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-500 dark:text-slate-400">{c.year}</span>
               </div>
-              <h3 className="mt-4 font-bold text-slate-800 dark:text-slate-100">{c.title}</h3>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{c.issuer}</p>
+              <h3 className="mt-4 font-bold text-slate-800 dark:text-slate-100">{pickText(lang, c, 'title')}</h3>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{pickText(lang, c, 'issuer')}</p>
+              {c.image_url && <img src={c.image_url} alt={pickText(lang, c, 'title')} className="mt-4 h-32 w-full rounded-lg object-cover" />}
             </div>
           ))}
         </div>
       </section>
 
       <section className="max-w-4xl mx-auto px-4 sm:px-6 pb-16">
-        <h2 className="text-3xl font-extrabold text-center mb-8 text-slate-800 dark:text-slate-100">Projects</h2>
+        <h2 className="text-3xl font-extrabold text-center mb-8 text-slate-800 dark:text-slate-100">{t.projects}</h2>
         <div className="grid gap-6 sm:grid-cols-2">
           {visibleProjects.map((p) => (
             <div key={p.id} className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 shadow p-6">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{p.title}</h3>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{p.description}</p>
+              {p.image_url && <img src={p.image_url} alt={pickText(lang, p, 'title')} className="mb-4 h-40 w-full rounded-lg object-cover" />}
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{pickText(lang, p, 'title')}</h3>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{pickText(lang, p, 'description')}</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {p.tech_stack?.split(',').map((t) => (
                   <span key={t} className="rounded-full bg-teal-50 dark:bg-teal-900/30 px-3 py-1 text-xs font-medium text-teal-600 dark:text-teal-400">{t.trim()}</span>
                 ))}
               </div>
               <div className="mt-4 flex gap-4 text-sm">
-                {p.live_url && <a className="font-semibold text-teal-600 dark:text-teal-400 hover:underline" href={p.live_url} target="_blank" rel="noreferrer">Live Demo</a>}
-                {p.repo_url && <a className="font-semibold text-slate-500 dark:text-slate-400 hover:underline" href={p.repo_url} target="_blank" rel="noreferrer">GitHub Repo</a>}
+                {p.live_url && <a className="font-semibold text-teal-600 dark:text-teal-400 hover:underline" href={p.live_url} target="_blank" rel="noreferrer">{t.liveDemo}</a>}
+                {p.repo_url && <a className="font-semibold text-slate-500 dark:text-slate-400 hover:underline" href={p.repo_url} target="_blank" rel="noreferrer">{t.repo}</a>}
               </div>
             </div>
           ))}
@@ -251,7 +343,7 @@ export default function Home() {
               disabled={currentProjectPage === 0}
               className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm text-slate-600 dark:text-slate-300 disabled:opacity-40"
             >
-              Prev
+              {t.prev}
             </button>
             {Array.from({ length: totalProjectPages }, (_, index) => (
               <button
@@ -273,14 +365,14 @@ export default function Home() {
               disabled={currentProjectPage === totalProjectPages - 1}
               className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm text-slate-600 dark:text-slate-300 disabled:opacity-40"
             >
-              Next
+              {t.next}
             </button>
           </div>
         )}
       </section>
 
       <footer className="border-t border-slate-100 dark:border-slate-800 py-6 text-center text-sm text-slate-400">
-        © {new Date().getFullYear()} {profile?.name ?? 'Ahmad Sunhadi Kamil'}. All rights reserved.
+        © {new Date().getFullYear()} {profile?.name ?? 'Ahmad Sunhadi Kamil'}. {t.rights}
       </footer>
 
     </div>
