@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import Home from './pages/Home'
-import Admin from './pages/Admin'
+import Home from './pages/home/Home'
+import Admin from './pages/admin/Admin'
 
 export default function App() {
   return (
