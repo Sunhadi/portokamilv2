@@ -2,17 +2,50 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --font-sans: "Hanken Grotesk", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "Noto Sans JP", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Bricolage Grotesque", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 * {
   transition-property: background-color, border-color, color, fill, stroke;
   transition-duration: 300ms;
   transition-timing-function: ease;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
-  background: #f4f8fb;
-  color: #1e293b;
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  background: #ffffff;
+  color: var(--color-neutral-900);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+.dark body {
+  background: #0a0a0a;
+  color: #ededed;
 }
 
 @keyframes language-pop-in {
@@ -28,4 +61,30 @@ body {
 
 .language-menu {
   animation: language-pop-in 160ms ease-out;
+}
+
+.ph-stripes {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 9px,
+    currentColor 9px 10px
+  );
+}
+
+.cv-keep-together {
+  break-inside: avoid;
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
 }

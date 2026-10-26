@@ -1,4 +1,5 @@
-import { useEffect, useState, type JSX } from 'react'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase, supabaseConfigured } from '../../lib/supabase'
 import type { Certification, Education, Experience, Profile, Project, Skill, SocialLinks } from '../../types'
 
@@ -12,16 +13,21 @@ const translations: Record<Lang, Record<string, string>> = {
     yourName: 'Nama Anda',
     yourTitle: 'Web Developer',
     yourBio: 'Deskripsi singkat tentang Anda akan tampil di sini. Hubungkan Supabase untuk mengedit konten.',
-    skills: 'Technical Skills',
-    experience: 'Experience',
-    education: 'Education',
-    certifications: 'Certifications',
-    projects: 'Projects',
+    skills: 'Keahlian',
+    experience: 'Pengalaman',
+    education: 'Pendidikan',
+    certifications: 'Sertifikasi',
+    projects: 'Proyek',
     liveDemo: 'Live Demo',
-    repo: 'GitHub Repo',
-    prev: 'Prev',
-    next: 'Next',
+    repo: 'Repo',
+    prev: 'Kembali',
+    next: 'Lanjut',
     rights: 'All rights reserved.',
+    statusLabel: 'Status',
+    statusValue: 'Terbuka untuk peluang kerja',
+    contactLabel: 'Kontak',
+    socialsLabel: 'Sosial',
+    workTogether: 'Mari bekerja sama',
   },
   en: {
     loading: 'Loading portfolio...',
@@ -30,16 +36,21 @@ const translations: Record<Lang, Record<string, string>> = {
     yourName: 'Your Name',
     yourTitle: 'Web Developer',
     yourBio: 'A short description about you will appear here. Connect Supabase to edit the content.',
-    skills: 'Technical Skills',
+    skills: 'Skills',
     experience: 'Experience',
     education: 'Education',
     certifications: 'Certifications',
     projects: 'Projects',
     liveDemo: 'Live Demo',
-    repo: 'GitHub Repo',
-    prev: 'Prev',
+    repo: 'Repo',
+    prev: 'Back',
     next: 'Next',
     rights: 'All rights reserved.',
+    statusLabel: 'Status',
+    statusValue: 'Open to opportunities',
+    contactLabel: 'Contact',
+    socialsLabel: 'Social',
+    workTogether: "Let's work together",
   },
   ja: {
     loading: 'ポートフォリオを読み込み中...',
@@ -48,16 +59,21 @@ const translations: Record<Lang, Record<string, string>> = {
     yourName: 'あなたの名前',
     yourTitle: 'Web Developer',
     yourBio: 'あなたについての短い紹介がここに表示されます。Supabaseを接続して内容を編集してください。',
-    skills: '技術スキル',
+    skills: 'スキル',
     experience: '職歴',
     education: '学歴',
     certifications: '資格',
     projects: 'プロジェクト',
     liveDemo: 'ライブデモ',
-    repo: 'GitHubリポジトリ',
-    prev: '前へ',
+    repo: 'リポジトリ',
+    prev: '戻る',
     next: '次へ',
     rights: 'All rights reserved.',
+    statusLabel: 'ステータス',
+    statusValue: '新しい機会を探しています',
+    contactLabel: '連絡先',
+    socialsLabel: 'ソーシャル',
+    workTogether: '一緒につくりましょう',
   },
 }
 
@@ -68,44 +84,24 @@ function pickText<T extends Record<string, any>>(lang: Lang, item: T | null | un
   return item?.[key] ?? ''
 }
 
-function TypingTitle({ text }: { text: string }) {
-  const [displayed, setDisplayed] = useState('')
-  const [idx, setIdx] = useState(0)
-  const [deleting, setDeleting] = useState(false)
-
-  useEffect(() => {
-    setDisplayed('')
-    setIdx(0)
-    setDeleting(false)
-  }, [text])
-
-  useEffect(() => {
-    let t: ReturnType<typeof setTimeout>
-
-    if (!deleting && idx < text.length) {
-      t = setTimeout(() => {
-        setDisplayed(text.slice(0, idx + 1))
-        setIdx(idx + 1)
-      }, 90)
-    } else if (!deleting && idx === text.length) {
-      t = setTimeout(() => setDeleting(true), 2000)
-    } else if (deleting && idx > 0) {
-      t = setTimeout(() => {
-        setDisplayed(text.slice(0, idx - 1))
-        setIdx(idx - 1)
-      }, 50)
-    } else {
-      setDeleting(false)
-    }
-
-    return () => clearTimeout(t)
-  }, [idx, deleting, text])
-
+const wrap = 'mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8'
+const labelCls = 'font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400'
+function SectionHead({ index, title, invert = false }: { index: string; title: string; invert?: boolean }) {
   return (
-    <p className="mt-3 text-xl font-bold text-teal-500">
-      {displayed}
-      <span className="animate-pulse">|</span>
-    </p>
+    <div
+      className={`mb-6 flex items-baseline gap-3 border-b pb-4 sm:mb-8 sm:gap-4 ${
+        invert ? 'border-neutral-700' : 'border-neutral-200 dark:border-neutral-800'
+      }`}
+    >
+      <span className={`font-mono text-xs ${invert ? 'text-neutral-500' : labelCls}`}>{index}</span>
+      <h2
+        className={`min-w-0 break-words font-display text-2xl font-bold uppercase tracking-tight sm:text-3xl ${
+          invert ? 'text-neutral-100' : 'text-neutral-950 dark:text-white'
+        }`}
+      >
+        {title}
+      </h2>
+    </div>
   )
 }
 
@@ -120,11 +116,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [dark, setDark] = useState(false)
   const [lang, setLang] = useState<Lang>(() => (typeof window !== 'undefined' && ['id', 'en', 'ja'].includes(window.localStorage.getItem('lang') ?? '')) ? (window.localStorage.getItem('lang') as Lang) : 'id')
-  const [langOpen, setLangOpen] = useState(false)
   const [projectPage, setProjectPage] = useState(0)
-  const [isDesktop, setIsDesktop] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)').matches : false,
-  )
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (!supabaseConfigured) { setLoading(false); return }
@@ -151,256 +144,386 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    const media = window.matchMedia('(min-width: 768px)')
-    const update = () => setIsDesktop(media.matches)
-    update()
-    media.addEventListener('change', update)
-    return () => media.removeEventListener('change', update)
-  }, [])
-
-  useEffect(() => {
-    setProjectPage(0)
-  }, [projects])
-
-  useEffect(() => {
     window.localStorage.setItem('lang', lang)
   }, [lang])
 
   const t = translations[lang]
 
+  const socialLinks: { url: string; label: string }[] = [
+    { url: links?.github ?? '', label: 'GitHub' },
+    { url: links?.linkedin ?? '', label: 'LinkedIn' },
+    { url: links?.gitlab ?? '', label: 'GitLab' },
+    { url: links?.twitter ?? '', label: 'Twitter / X' },
+    { url: links?.instagram ?? '', label: 'Instagram' },
+    { url: links?.youtube ?? '', label: 'YouTube' },
+    { url: links?.website ?? '', label: 'Website' },
+  ].filter((s) => s.url !== '')
+
   const projectsPerPage = 4
   const totalProjectPages = Math.max(1, Math.ceil(projects.length / projectsPerPage))
   const currentProjectPage = Math.min(projectPage, totalProjectPages - 1)
-  const visibleProjects = isDesktop
-    ? projects.slice(currentProjectPage * projectsPerPage, (currentProjectPage + 1) * projectsPerPage)
-    : projects
+  const visibleProjects = projects.slice(currentProjectPage * projectsPerPage, (currentProjectPage + 1) * projectsPerPage)
+
+  let secIdx = 0
+  const nextSec = () => String(++secIdx).padStart(2, '0')
 
   if (loading) {
     return (
-      <div className="min-h-screen grid place-items-center" style={{ background: '#f4f8fb' }}>
+      <div className={`min-h-screen grid place-items-center bg-white dark:bg-neutral-950 ${dark ? 'dark' : ''}`}>
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-teal-500 animate-spin" />
-          <p className="text-slate-500 dark:text-slate-400 font-medium animate-pulse">{t.loading}</p>
+          <div className="h-12 w-12 rounded-full border-4 border-neutral-200 dark:border-neutral-700 border-t-neutral-900 dark:border-t-neutral-100 animate-spin" />
+          <p className="font-mono text-xs uppercase tracking-wider text-neutral-500 dark:text-neutral-400 animate-pulse">{t.loading}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className={`min-h-screen text-slate-800 dark:text-slate-100 space-y-8 ${dark ? 'dark' : ''}`} style={{ background: dark ? '#0f172a' : '#f4f8fb' }}>
-      <button
-        onClick={() => setDark(!dark)}
-        className="fixed top-4 right-4 z-10 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-md transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95"
-        title={dark ? t.lightMode : t.darkMode}
-      >
-        {dark ? (
-          <svg className="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-        ) : (
-          <svg className="w-5 h-5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        )}
-      </button>
+    <div className={`min-h-screen bg-white pt-12 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100 sm:pt-0 ${dark ? 'dark' : ''}`}>
+      {/* Nav */}
+      <nav className="fixed inset-x-0 top-0 z-30 isolate border-b border-neutral-100 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950 sm:sticky sm:bg-white/85 sm:shadow-none sm:backdrop-blur sm:dark:bg-neutral-950/85">
+        <div className={`${wrap} flex min-h-12 items-center justify-between gap-1.5 py-1.5 sm:h-14 sm:gap-3 sm:py-0`}>
+          <Link to="/" className="min-w-0 flex-1 truncate font-display text-[11px] font-bold uppercase tracking-tight sm:text-base">
+            {profile?.name ?? t.yourName}
+          </Link>
 
-      <div className="fixed top-4 left-4 z-10 hidden gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1 shadow-md sm:flex">
-        {(['id', 'en', 'ja'] as Lang[]).map((code) => (
-          <button
-            key={code}
-            type="button"
-            onClick={() => setLang(code)}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${lang === code ? 'bg-teal-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-          >
-            {code === 'ja' ? 'JP' : code.toUpperCase()}
-          </button>
-        ))}
-      </div>
-
-      <div className="fixed bottom-4 right-4 z-20 flex flex-col items-end gap-3 sm:hidden">
-        {langOpen && (
-          <div className="flex gap-1 rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 p-1 shadow-xl backdrop-blur-md language-menu">
-            {(['id', 'en', 'ja'] as Lang[]).map((code) => (
-              <button
-                key={code}
-                type="button"
-                onClick={() => { setLang(code); setLangOpen(false) }}
-                className={`rounded-xl px-3 py-2 text-xs font-bold transition-all hover:scale-105 active:scale-95 ${lang === code ? 'bg-teal-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-              >
-                {code === 'ja' ? 'JP' : code.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={() => setLangOpen((open) => !open)}
-          aria-label="Pilih bahasa"
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-600 text-xs font-extrabold text-white shadow-xl transition-all hover:scale-105 hover:bg-teal-500 active:scale-95"
-        >
-          {lang === 'ja' ? 'JP' : lang.toUpperCase()}
-        </button>
-      </div>
-
-      <header className="max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-16 text-center">
-        <div className="relative mx-auto mb-6 h-32 w-32">
-          <div className="absolute inset-0 rounded-full bg-sky-400/30 blur-2xl animate-pulse" />
-          <div className="relative h-28 w-28 mx-auto mt-2 overflow-hidden rounded-full ring-4 ring-white dark:ring-slate-900 bg-slate-100 dark:bg-slate-800 shadow-[0_0_40px_rgba(56,189,248,0.5)] flex items-center justify-center">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt={profile.name} className="h-full w-full object-cover" />
-            ) : (
-              <span className="text-4xl font-bold text-white">{profile?.name ? profile.name.charAt(0).toUpperCase() : '?'}</span>
-            )}
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+            <div className="flex h-8 divide-x divide-neutral-200 border border-neutral-200 dark:divide-neutral-700 dark:border-neutral-700 sm:h-9">
+              {(['id', 'en', 'ja'] as Lang[]).map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => setLang(code)}
+                  aria-pressed={lang === code}
+                  className={`grid w-7 place-items-center font-mono text-[10px] uppercase tracking-wider transition-colors sm:w-9 sm:text-xs ${
+                    lang === code
+                      ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
+                      : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100'
+                  }`}
+                >
+                  {code === 'ja' ? 'JP' : code.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setDark(!dark)}
+              title={dark ? t.lightMode : t.darkMode}
+              aria-label={dark ? t.lightMode : t.darkMode}
+              className="grid h-8 w-8 place-items-center border border-neutral-200 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100 sm:h-9 sm:w-9"
+            >
+              {dark ? (
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+              ) : (
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              )}
+            </button>
           </div>
         </div>
-        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100 px-2">{profile?.name ?? t.yourName}</h1>
-        <TypingTitle text={profile ? pickText(lang, profile, 'title') : t.yourTitle} />
-        <p className="mt-6 font-semibold text-slate-500 dark:text-slate-400 leading-relaxed max-w-3xl mx-auto text-justify">{profile ? pickText(lang, profile, 'bio') : t.yourBio}</p>
+      </nav>
 
-        <div className="mt-8 flex justify-center items-center gap-6">
-          {(() => {
-            const socials: { url: string; label: string; icon: JSX.Element }[] = [
-              { url: `mailto:${profile?.email ?? ''}`, label: 'Email', icon: <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg> },
-              { url: links?.github ?? '', label: 'GitHub', icon: <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.75 2.69 1.25 3.34.95.1-.75.4-1.25.72-1.54-2.56-.29-5.25-1.28-5.25-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.7 5.4-5.26 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.2.68.8.56A10.52 10.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg> },
-              { url: links?.linkedin ?? '', label: 'LinkedIn', icon: <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.05-1.85-3.05-1.85 0-2.14 1.45-2.14 2.95v5.67H9.36V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg> },
-              { url: links?.gitlab ?? '', label: 'GitLab', icon: <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M22.65 14.39 12 22.13 1.35 14.39a.84.84 0 0 1-.3-.94l1.22-3.66 2.49 7.42 7.24 2.65 7.24-2.65 2.49-7.42 1.22 3.66a.84.84 0 0 1-.3.94zM12 1.31 8.6 7.26h6.8L12 1.31zM3.69 7.26 1.47 12.3 8.6 7.26H3.69zm13.71 0H15.4l7.13 5.04-2.22-5.04z"/></svg> },
-              { url: links?.twitter ?? '', label: 'Twitter/X', icon: <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M18.9 2h3.3l-7.2 8.3L23.5 22h-6.7l-5.2-6.9L5.8 22H2.5l7.7-8.9L.5 2h6.9l4.7 6.2L18.9 2zm-1.2 18h1.8L7.1 3.9H5.2L17.7 20z"/></svg> },
-              { url: links?.instagram ?? '', label: 'Instagram', icon: <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg> },
-              { url: links?.youtube ?? '', label: 'YouTube', icon: <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.3 31.3 0 0 0 0 12a31.3 31.3 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.3 31.3 0 0 0 24 12a31.3 31.3 0 0 0-.5-5.8zM9.5 15.5v-7l6.5 3.5-6.5 3.5z"/></svg> },
-              { url: links?.website ?? '', label: 'Website', icon: <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> },
-            ]
-            return socials
-              .filter((s) => s.url !== '' && s.url !== 'mailto:')
-              .map((s) =>
-                s.label === 'Email' ? (
-                  <a key={s.label} href={s.url} title={s.label} className="text-slate-400 hover:text-sky-600 transition">{s.icon}</a>
-                ) : (
-                  <a key={s.label} href={s.url} target="_blank" rel="noreferrer" title={s.label} className="text-slate-400 hover:text-sky-600 transition">{s.icon}</a>
-                ),
-              )
-          })()}
+      {/* Hero */}
+      <header className={`${wrap} py-10 sm:py-16 md:py-20`}>
+        <h1 className="break-words font-display text-[length:clamp(1.65rem,7vw,4.5rem)] font-bold uppercase leading-[0.9] tracking-tight">
+          {profile?.name ?? t.yourName}
+        </h1>
+        <p className="mt-4 font-mono text-xs uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400 sm:mt-5 sm:text-sm">
+          <span className="mr-3 inline-block h-2 w-2 bg-neutral-900 dark:bg-neutral-100" />
+          {profile ? pickText(lang, profile, 'title') : t.yourTitle}
+        </p>
+
+        <div className="mt-8 grid gap-8 sm:mt-10 sm:gap-10 md:grid-cols-[1.6fr_1fr] md:gap-12">
+          <div>
+            <p className={`max-w-2xl text-sm text-neutral-500 dark:text-neutral-400 sm:text-base ${lang === 'ja' ? 'leading-[1.95]' : 'leading-relaxed'}`}>
+              {profile ? pickText(lang, profile, 'bio') : t.yourBio}
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/cv')}
+              className="mt-8 inline-flex w-full cursor-pointer items-center justify-center gap-2 border border-neutral-900 px-6 py-3 font-mono text-xs uppercase tracking-wider text-neutral-900 transition-colors hover:bg-neutral-900 hover:text-white sm:w-auto dark:border-neutral-100 dark:text-neutral-100 dark:hover:bg-neutral-100 dark:hover:text-neutral-900"
+            >
+              Download CV
+              <span aria-hidden>↗</span>
+            </button>
+          </div>
+
+          <div className="min-w-0 self-start border-t border-neutral-100 pt-2 dark:border-neutral-800 md:border-t-0 md:border-l md:border-neutral-200 md:pt-0 md:pl-10 dark:md:border-neutral-800">
+          <div className="divide-y divide-neutral-100 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0 dark:divide-neutral-800">
+            {profile?.email && (
+              <div className="py-5">
+                <p className={labelCls}>{t.contactLabel}</p>
+                <a
+                  href={`mailto:${profile.email}`}
+                  className="mt-1.5 block break-all text-sm hover:underline"
+                >
+                  {profile.email}
+                </a>
+              </div>
+            )}
+            <div className="py-5">
+              <p className={labelCls}>{t.statusLabel}</p>
+              <p className="mt-1.5 flex min-w-0 items-start gap-2 text-sm">
+                <span className="inline-block h-2 w-2 shrink-0 bg-neutral-900 dark:bg-neutral-100" />
+                <span className="min-w-0 break-words">{t.statusValue}</span>
+              </p>
+            </div>
+            {socialLinks.length > 0 && (
+              <div className="py-5">
+                <p className={labelCls}>{t.socialsLabel}</p>
+                <ul className="mt-1.5 grid w-full grid-cols-2 gap-x-3 gap-y-2 md:grid-cols-1 md:gap-y-1.5">
+                  {socialLinks.map((s) => (
+                    <li key={s.label} className="min-w-0">
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group inline-flex max-w-full min-w-0 items-center gap-1 break-words text-sm text-neutral-600 transition-colors hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-neutral-100"
+                      >
+                        {s.label}
+                        <span className="transition-transform group-hover:translate-x-0.5" aria-hidden>↗</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            </div>
+          </div>
         </div>
       </header>
 
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 pb-12">
-        <h2 className="text-3xl font-extrabold text-center mb-6 text-slate-800 dark:text-slate-100">{t.skills}</h2>
-        <div className="flex flex-wrap gap-3 justify-center">
-          {skills.map((s) => (
-            <span key={s.id} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2 font-medium text-slate-700 dark:text-slate-200 shadow-sm">{s.name}</span>
-          ))}
-        </div>
-      </section>
+      {/* 01 — Skills (grid kotak seragam) */}
+      {skills.length > 0 && (
+        <section className={`${wrap} border-b border-neutral-100 py-12 sm:py-16 dark:border-neutral-800`}>
+          <SectionHead index={nextSec()} title={t.skills} />
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
+            {skills.map((s) => (
+              <li
+                key={s.id}
+                className="flex min-h-16 items-center justify-center border border-neutral-200 px-2 py-3 text-center font-display text-[13px] font-bold leading-snug text-neutral-800 transition-colors hover:border-neutral-900 hover:bg-neutral-900 hover:text-white dark:border-neutral-700 dark:text-neutral-100 dark:hover:border-neutral-100 dark:hover:bg-neutral-100 dark:hover:text-neutral-900 sm:min-h-[72px] sm:px-3 sm:py-4 sm:text-base"
+              >
+                {s.name}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-      <section className="max-w-3xl mx-auto px-4 sm:px-6 pb-16">
-        <h2 className="text-3xl font-extrabold text-center mb-8 text-slate-800 dark:text-slate-100">{t.experience}</h2>
-        <div className="relative">
-          <div className="absolute left-4 md:left-1/2 top-0 h-full w-px bg-slate-200" />
-          {experiences.map((e, i) => (
-            <div key={e.id} className={`relative mb-8 pl-10 md:pl-0 flex ${i % 2 === 0 ? 'md:justify-start' : 'md:justify-end'}`}>
-              <div className="w-full md:w-[45%] rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 shadow p-5">
-                <p className="text-sm font-semibold text-teal-500">{e.year}</p>
-                <h3 className="mt-1 font-bold text-slate-800 dark:text-slate-100">{pickText(lang, e, 'position')}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{pickText(lang, e, 'workplace')}</p>
-              </div>
-              <div className="absolute left-2.5 md:left-1/2 top-6 h-3 w-3 -translate-x-1/2 rounded-full bg-teal-400 ring-4 ring-white dark:ring-slate-900" />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="max-w-3xl mx-auto px-4 sm:px-6 pb-16">
-        <h2 className="text-3xl font-extrabold text-center mb-8 text-slate-800 dark:text-slate-100">{t.education}</h2>
-        <div className="space-y-6">
-          {educations.map((e) => (
-            <div key={e.id} className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 shadow p-8 text-center">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{pickText(lang, e, 'university')}</h3>
-              <p className="mt-2 text-teal-500 font-medium">{pickText(lang, e, 'degree')}</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{e.year} | {pickText(lang, e, 'location')}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 pb-16">
-        <h2 className="text-3xl font-extrabold text-center mb-8 text-slate-800 dark:text-slate-100">{t.certifications}</h2>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {certifications.map((c) => (
-            <div key={c.id} className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 shadow p-6">
-              <div className="flex items-start justify-between">
-                <div className="rounded-lg bg-teal-100 p-3">
-                  {c.issuer_logo_url ? (
-                    <img src={c.issuer_logo_url} alt={c.issuer} className="w-6 h-6 object-contain" />
+      {/* 02 — Projects (grid seragam 2 kolom) */}
+      {projects.length > 0 && (
+        <section className={`${wrap} border-b border-neutral-100 py-12 sm:py-16 dark:border-neutral-800`}>
+          <SectionHead index={nextSec()} title={t.projects} />
+          <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 sm:gap-y-12">
+            {visibleProjects.map((p) => {
+              const techs = (p.tech_stack ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+              const desc = pickText(lang, p, 'description')
+              const imgHref = p.live_url || p.repo_url || ''
+              return (
+                <article key={p.id} className="group flex h-full flex-col">
+                  {p.image_url ? (
+                    <a
+                      href={imgHref || undefined}
+                      target={imgHref ? '_blank' : undefined}
+                      rel="noreferrer"
+                      className={`block overflow-hidden border border-neutral-200 dark:border-neutral-800 ${imgHref ? 'cursor-pointer' : ''}`}
+                    >
+                      <img
+                        src={p.image_url}
+                        alt={pickText(lang, p, 'title')}
+                        className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                      />
+                    </a>
                   ) : (
-                    <svg className="w-6 h-6 text-teal-600 dark:text-teal-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 2.4h3.4v3.4L20 10l-2.2 2.2v3.4h-3.4L12 18l-2.4-2.4H6.2v-3.4L4 10l2.2-2.2V4.4h3.4L12 2zm0 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
+                    <div
+                      className="ph-stripes flex aspect-[16/10] items-center justify-center border border-neutral-200 text-neutral-300 dark:border-neutral-800 dark:text-neutral-700"
+                      aria-hidden
+                    />
+                  )}
+                  <h3 className="mt-4 break-words font-display text-lg font-bold leading-snug text-neutral-950 dark:text-white">
+                    {pickText(lang, p, 'title')}
+                  </h3>
+                  {desc && (
+                    <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
+                      {desc}
+                    </p>
+                  )}
+                  {techs.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {techs.map((tech) => (
+                        <span
+                          key={tech}
+                          className="border border-neutral-200 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-neutral-500 dark:border-neutral-700 dark:text-neutral-400"
+                        >
+                          {tech}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {(p.live_url || p.repo_url) && (
+                    <div className="mt-auto flex gap-5 pt-5 font-mono text-xs uppercase tracking-wider">
+                      {p.live_url && (
+                        <a className="hover:underline" href={p.live_url} target="_blank" rel="noreferrer">
+                          {t.liveDemo} ↗
+                        </a>
+                      )}
+                      {p.repo_url && (
+                        <a className="text-neutral-400 hover:text-neutral-900 hover:underline dark:hover:text-neutral-100" href={p.repo_url} target="_blank" rel="noreferrer">
+                          {t.repo} ↗
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </article>
+              )
+            })}
+          </div>
+
+          {totalProjectPages > 1 && (
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-2 sm:mt-12">
+              <button
+                type="button"
+                onClick={() => setProjectPage((page) => Math.max(0, page - 1))}
+                disabled={currentProjectPage === 0}
+                className="border border-neutral-200 px-3 py-2 font-mono text-xs uppercase tracking-wider text-neutral-600 transition-colors hover:bg-neutral-100 disabled:opacity-40 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              >
+                ← {t.prev}
+              </button>
+              {Array.from({ length: totalProjectPages }, (_, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => setProjectPage(index)}
+                  className={`px-3 py-2 font-mono text-xs uppercase tracking-wider transition-colors ${
+                    currentProjectPage === index
+                      ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
+                      : 'border border-neutral-200 text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'
+                  }`}
+                >
+                  {String(index + 1).padStart(2, '0')}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setProjectPage((page) => Math.min(totalProjectPages - 1, page + 1))}
+                disabled={currentProjectPage === totalProjectPages - 1}
+                className="border border-neutral-200 px-3 py-2 font-mono text-xs uppercase tracking-wider text-neutral-600 transition-colors hover:bg-neutral-100 disabled:opacity-40 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              >
+                {t.next} →
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* 03 — Experience (list editorial: tahun kiri, isi kanan) */}
+      {experiences.length > 0 && (
+        <section className={`${wrap} border-b border-neutral-100 py-12 sm:py-16 dark:border-neutral-800`}>
+          <SectionHead index={nextSec()} title={t.experience} />
+          <div>
+            {experiences.map((e) => (
+                <article
+                key={e.id}
+                className="grid gap-1 border-b border-neutral-100 py-6 last:border-b-0 sm:grid-cols-[160px_1fr] sm:gap-6 dark:border-neutral-800"
+              >
+                <p className="font-mono text-xs uppercase tracking-wider text-neutral-400 dark:text-neutral-500">{e.year}</p>
+                <div className="min-w-0">
+                  <h3 className="break-words font-display text-lg font-bold sm:text-xl">{pickText(lang, e, 'position')}</h3>
+                  <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
+                    {pickText(lang, e, 'workplace')}
+                    {e.location && <span> · {e.location}</span>}
+                  </p>
+                  {e.description && (
+                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
+                      {pickText(lang, e, 'description')}
+                    </p>
                   )}
                 </div>
-                <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-500 dark:text-slate-400">{c.year}</span>
-              </div>
-              <h3 className="mt-4 font-bold text-slate-800 dark:text-slate-100">{pickText(lang, c, 'title')}</h3>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{pickText(lang, c, 'issuer')}</p>
-              {c.image_url && <img src={c.image_url} alt={pickText(lang, c, 'title')} className="mt-4 h-32 w-full rounded-lg object-cover" />}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 pb-16">
-        <h2 className="text-3xl font-extrabold text-center mb-8 text-slate-800 dark:text-slate-100">{t.projects}</h2>
-        <div className="grid gap-6 sm:grid-cols-2">
-          {visibleProjects.map((p) => (
-            <div key={p.id} className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 shadow p-6">
-              {p.image_url && <img src={p.image_url} alt={pickText(lang, p, 'title')} className="mb-4 h-40 w-full rounded-lg object-cover" />}
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{pickText(lang, p, 'title')}</h3>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{pickText(lang, p, 'description')}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {p.tech_stack?.split(',').map((t) => (
-                  <span key={t} className="rounded-full bg-teal-50 dark:bg-teal-900/30 px-3 py-1 text-xs font-medium text-teal-600 dark:text-teal-400">{t.trim()}</span>
-                ))}
-              </div>
-              <div className="mt-4 flex gap-4 text-sm">
-                {p.live_url && <a className="font-semibold text-teal-600 dark:text-teal-400 hover:underline" href={p.live_url} target="_blank" rel="noreferrer">{t.liveDemo}</a>}
-                {p.repo_url && <a className="font-semibold text-slate-500 dark:text-slate-400 hover:underline" href={p.repo_url} target="_blank" rel="noreferrer">{t.repo}</a>}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {isDesktop && totalProjectPages > 1 && (
-          <div className="mt-8 hidden items-center justify-center gap-2 md:flex">
-            <button
-              type="button"
-              onClick={() => setProjectPage((page) => Math.max(0, page - 1))}
-              disabled={currentProjectPage === 0}
-              className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm text-slate-600 dark:text-slate-300 disabled:opacity-40"
-            >
-              {t.prev}
-            </button>
-            {Array.from({ length: totalProjectPages }, (_, index) => (
-              <button
-                key={index}
-                type="button"
-                onClick={() => setProjectPage(index)}
-                className={`rounded-lg px-3 py-2 text-sm ${
-                  currentProjectPage === index
-                    ? 'bg-teal-600 text-white'
-                    : 'border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                }`}
-              >
-                {index + 1}
-              </button>
+              </article>
             ))}
-            <button
-              type="button"
-              onClick={() => setProjectPage((page) => Math.min(totalProjectPages - 1, page + 1))}
-              disabled={currentProjectPage === totalProjectPages - 1}
-              className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm text-slate-600 dark:text-slate-300 disabled:opacity-40"
-            >
-              {t.next}
-            </button>
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
-      <footer className="border-t border-slate-100 dark:border-slate-800 py-6 text-center text-sm text-slate-400">
-        © {new Date().getFullYear()} {profile?.name ?? 'Ahmad Sunhadi Kamil'}. {t.rights}
+      {/* 04 — Education */}
+      {educations.length > 0 && (
+        <section className={`${wrap} border-b border-neutral-100 py-12 sm:py-16 dark:border-neutral-800`}>
+          <SectionHead index={nextSec()} title={t.education} />
+          <div>
+            {educations.map((e) => (
+                <article
+                key={e.id}
+                className="grid gap-1 border-b border-neutral-100 py-6 last:border-b-0 sm:grid-cols-[160px_1fr] sm:gap-6 dark:border-neutral-800"
+              >
+                <p className="font-mono text-xs uppercase tracking-wider text-neutral-400 dark:text-neutral-500">{e.year}</p>
+                <div className="min-w-0">
+                  <h3 className="break-words font-display text-lg font-bold sm:text-xl">{pickText(lang, e, 'university')}</h3>
+                  <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
+                    {pickText(lang, e, 'degree')}
+                    {e.location && <span> · {e.location}</span>}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 05 — Certifications (grid ringkas) */}
+      {certifications.length > 0 && (
+        <section className={`${wrap} py-12 sm:py-16`}>
+          <SectionHead index={nextSec()} title={t.certifications} />
+          <div className="grid grid-cols-1 gap-x-5 gap-y-6 min-[400px]:grid-cols-2 lg:grid-cols-4 lg:gap-x-8">
+            {certifications.map((c) => (
+              <article key={c.id} className="border-t border-neutral-200 pt-4 dark:border-neutral-800">
+                <div className="flex items-center justify-between gap-2">
+                  <span className={labelCls}>{c.year}</span>
+                  {c.issuer_logo_url && (
+                    <img src={c.issuer_logo_url} alt={c.issuer} className="h-5 w-5 object-contain opacity-80" />
+                  )}
+                </div>
+                <h3 className="mt-2 break-words font-display text-sm font-bold leading-snug text-neutral-950 dark:text-white">
+                  {pickText(lang, c, 'title')}
+                </h3>
+                <p className="mt-1 break-words text-xs text-neutral-500 dark:text-neutral-400">
+                  {pickText(lang, c, 'issuer')}
+                </p>
+                {c.image_url && (
+                  <a href={c.image_url} target="_blank" rel="noreferrer" className="mt-3 block">
+                    <img
+                      src={c.image_url}
+                      alt={pickText(lang, c, 'title')}
+                      className="h-20 w-full border border-neutral-200 object-cover opacity-80 transition-opacity hover:opacity-100 dark:border-neutral-800"
+                    />
+                  </a>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Footer — pernyataan besar */}
+      <footer className="bg-neutral-900 text-neutral-100">
+        <div className={`${wrap} py-12 sm:py-20`}>
+          <p className="font-mono text-xs uppercase tracking-[0.25em] text-neutral-500">{t.workTogether}</p>
+          {profile?.email ? (
+            <a
+              href={`mailto:${profile.email}`}
+              className="mt-4 block break-all font-display text-2xl font-bold leading-tight tracking-tight transition-colors hover:text-white sm:text-3xl md:text-4xl lg:text-5xl"
+            >
+              {profile.email}
+            </a>
+          ) : (
+            <p className="mt-4 break-words font-display text-2xl font-bold leading-tight tracking-tight sm:text-3xl md:text-4xl lg:text-5xl">
+              {profile?.name ?? t.yourName}
+            </p>
+          )}
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-700 pt-6 font-mono text-[11px] uppercase tracking-wider text-neutral-500 sm:mt-12">
+            <span className="break-words">© {new Date().getFullYear()} {profile?.name ?? 'Portfolio'}</span>
+            <span className="break-words">{t.rights}</span>
+          </div>
+        </div>
       </footer>
-
     </div>
   )
 }

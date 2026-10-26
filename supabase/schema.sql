@@ -144,3 +144,47 @@ on conflict (id) do nothing;
 create policy "public read portfolio" on storage.objects for select using (bucket_id = 'portfolio');
 create policy "admin upload portfolio" on storage.objects for insert with check (bucket_id = 'portfolio' and auth.role() = 'authenticated');
 
+-- Halaman CV: tabel konten + kolom pendukung (lihat juga supabase/cv.sql untuk isi awal)
+create table if not exists cv_content (
+  id bigint primary key generated always as identity,
+  name text,
+  role text,
+  email text,
+  phone text,
+  linkedin text,
+  website text,
+  meta_location text,
+  meta_location_en text,
+  meta_location_ja text,
+  meta_exp text,
+  meta_exp_en text,
+  meta_exp_ja text,
+  summary text,
+  summary_en text,
+  summary_ja text,
+  matrix jsonb,
+  skillsets jsonb,
+  strengths jsonb
+);
+
+alter table experiences add column if not exists location text;
+alter table experiences add column if not exists location_en text;
+alter table experiences add column if not exists location_ja text;
+alter table experiences add column if not exists description text;
+alter table experiences add column if not exists description_en text;
+alter table experiences add column if not exists description_ja text;
+alter table experiences add column if not exists on_cv boolean default false;
+
+alter table education add column if not exists on_cv boolean default false;
+alter table certifications add column if not exists on_cv boolean default false;
+
+alter table projects add column if not exists impact text;
+alter table projects add column if not exists impact_en text;
+alter table projects add column if not exists impact_ja text;
+alter table projects add column if not exists on_cv boolean default false;
+
+alter table cv_content enable row level security;
+
+create policy "public read cv_content" on cv_content for select using (true);
+create policy "admin write cv_content" on cv_content for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
