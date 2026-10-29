@@ -1,9 +1,6 @@
 {
-  "headers": [
-    {
-      "source": "/home-old",
-      "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }]
-    }
+  "redirects": [
+    { "source": "/home-old", "destination": "/", "permanent": true }
   ],
   "rewrites": [
     { "source": "/robots.txt", "destination": "/robots.txt" },
