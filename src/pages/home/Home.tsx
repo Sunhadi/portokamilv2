@@ -225,11 +225,11 @@ export default function Home() {
       {/* Hero */}
       <header className={`${wrap} py-10 sm:py-16 md:py-20`}>
         <h1 className="break-words font-display text-[length:clamp(1.65rem,7vw,4.5rem)] font-bold uppercase leading-[0.9] tracking-tight">
-          {profile?.name ?? t.yourName}
+          Ahmad Sunhadi Kamil
         </h1>
         <p className="mt-4 font-mono text-xs uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400 sm:mt-5 sm:text-sm">
           <span className="mr-3 inline-block h-2 w-2 bg-neutral-900 dark:bg-neutral-100" />
-          {profile ? pickText(lang, profile, 'title') : t.yourTitle}
+          Technical Project Manager | Fullstack Developer
         </p>
 
         <div className="mt-8 grid gap-8 sm:mt-10 sm:gap-10 md:grid-cols-[1.6fr_1fr] md:gap-12">
